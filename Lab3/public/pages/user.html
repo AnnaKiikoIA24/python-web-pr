@@ -1,0 +1,181 @@
+<html>
+<header>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registration Page</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+    integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <script lang="js" src="/static/js/users.js"></script>
+    <script lang="js" src="/static/js/groups.js"></script>    
+    <script lang="js" src="/static/js/validation.data.js"></script>
+</header>
+
+<body>
+  <div class="card authorization-data">
+    <div class="card-header bg-primary text-white">
+      <i class="fa-solid fa-user-plus"></i> <span id="idCardHeader">Реєстрація користувача</span>
+    </div>
+
+    <form class="needs-validation m-3" name="formRegistr" id="idFormRegistr" method="post">
+
+      <div class="mb-3">
+        <label for="idEmail" class="form-label">Логін (Email)*</label>
+        <input type="email" class="form-control" id="idEmail" name="login" placeholder="kk@example.com" required>
+        <div class="invalid-feedback">
+          Будь ласка, введіть валідний Email
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="idPassword" class="form-label">Пароль*</label>
+        <input type="password" class="form-control" id="idPassword" name="password" minlength="4" required>
+        <div class="invalid-feedback">
+          Будь ласка, введіть валідний пароль (довжина має бути не менше 4 символів)
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="idLastName" class="form-label">Прізвище*</label>
+        <input type="text" class="form-control" id="idLastName" name="last_name"
+          pattern="^[A-ZА-ЯЄЇІ][A-Za-zА-Яа-яЄєЇїІі\s]+$" required>
+        <div class="invalid-feedback">
+          Будь ласка, введіть валідне прізвище: не містить номерів, перша літера велика, мінімум 2 символи
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="idFirstName" class="form-label">Ім'я*</label>
+        <input type="text" class="form-control" id="idFirstName" name="first_name"
+          pattern="^[A-ZА-ЯЄЇІ][A-Za-zА-Яа-яЄєЇїІі\s]*$" required>
+        <div class="invalid-feedback">
+          Будь ласка, введіть валідне ім'я: не містить номерів, перша літера велика
+        </div>
+      </div>
+
+      <div class="form-check">
+        <input class="form-check-input" type="radio" name="role" id="flexRadioTeacher" value=0 required>
+        <label class="form-check-label" for="flexRadioTeacher">
+          Викладач
+        </label>
+      </div>
+      <div class="form-check">
+        <input class="form-check-input" type="radio" name="role" id="flexRadioStudent" value=1 required>
+        <label class="form-check-label" for="flexRadioStudent">
+          Студент
+        </label>
+        <div class="invalid-feedback">
+          Оберіть роль
+        </div>
+      </div>
+
+      <div class="mb-3" id="idDivGroup" style="display: none;">
+        <label for="idGroup" class="form-label">Група*</label>
+        <select class="form-control" id="idGroup" name="group" required></select>
+        <div class="invalid-feedback">
+          Будь ласка, оберіть групу
+        </div>
+      </div>
+
+      <div class="text-center">
+        <button type="button" name="signUp" class="btn btn-success" disabled>
+          Зареєструватись
+        </button>
+        <button type="reset" name="cancel" class="btn btn-secondary" disabled>
+          Скасувати
+        </button>      
+        <button type="reset" name="exit" class="btn btn-primary" onclick="signOut()">
+          На головну
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // Заповнення переліку груп
+      getGroups(document.formRegistr.group);
+      // ----------------------------------------------------------------------
+
+      // У форми реєстрації обираємо всі можливі дочірні елементи вводу
+      formRegistr
+        .querySelectorAll("input, select, textarea")
+        .forEach((element) => {
+          // на кожен елемент підключаємо обробники подій change, input
+          element.addEventListener('change', (event) => checkValidation(event));
+          element.addEventListener('input', (event) => resetClassList(event.currentTarget));
+        });   
+
+      formRegistr.querySelectorAll(".form-check-input")
+      .forEach((element) => {
+          // на кожен елемент checkbox підключаємо обробники подій change
+          element.addEventListener('change', (event) => {
+            // Якщо обрана опція "Викладач", то групу ховаємо
+            document.getElementById("idDivGroup").style.display = event.currentTarget.value == 1 ? "" : "none";
+            formRegistr.group.disabled = event.currentTarget.value == 0;            
+          });
+        });       
+
+      // Для форми реєстрації в цілому визначаємо обробник події reset
+      formRegistr.addEventListener('reset', (event) => {
+        // робимо кнопку Sign Up disabled
+        event.currentTarget.signUp.disabled = true;
+        // робимо кнопку Cancel disabled
+        event.currentTarget.cancel.disabled = true;
+        event.currentTarget.group.style.display = "none";
+        event.currentTarget.group.disabled = true;
+        // У елементів форми вилучаємо стилі перевірок
+        event.currentTarget.querySelectorAll("input, select, textarea")
+          .forEach((node) => resetClassList(node));
+
+      }, false);
+
+      // Для форми реєстрації в цілому визначаємо обробник події oninput
+      formRegistr.addEventListener('input', (event) => {
+        // кнопка Зареєструватись доступна, якщо вся форма валідна
+        event.currentTarget.signUp.disabled = !event.currentTarget.checkValidity();
+        // робимо кнопку Cancel доступною
+        if (event.currentTarget.cancel.disabled)
+        event.currentTarget.cancel.disabled = false;
+
+      }, false);
+
+      formRegistr.signUp.addEventListener('click', () => {
+        const userId = getCookie("user_id");
+        if (userId)
+          editUser(userId);
+        else
+          addUser();
+      });
+
+      const userId = getCookie("user_id");
+      if (userId) {
+        getUser(userId, fillUserInfo)
+      }
+    });
+
+    // ----------------------------------------------------------------------
+    // Заповнення полів форми при виклику на редагування
+    const fillUserInfo = (user) => {
+      formRegistr.login.value = user.login;
+      formRegistr.password.value = user.password;
+      formRegistr.last_name.value = user.lastName;
+      formRegistr.first_name.value = user.firstName;
+      formRegistr.role.value = user.role ? 1 : 0;
+      flexRadioTeacher.disabled = true;
+      flexRadioStudent.disabled = true;
+      idGroup.disabled = true;
+      formRegistr.group.value = user.idGroup;
+      document.getElementById("idDivGroup").style.display = user.role ? "" : "none";
+      document.getElementById("idCardHeader").innerText = "Редагування";
+      formRegistr.signUp.innerText = "Зберегти";
+    }
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,146 @@
+<html>
+<header>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Рейтинг успішності студента</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" 
+    rel="stylesheet" 
+    integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3"
+    crossorigin="anonymous">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js" 
+    integrity="sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13" 
+    crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+    integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <script lang="js" src="/static/js/users.js"></script>
+  <script lang="js" src="/static/js/subjects.js"></script>
+  <script lang="js" src="/static/js/journals.js"></script> 
+  <script lang="js" src="/static/js/rating.js"></script> 
+  <script lang="js">
+    // Пост-обробник події завантаження документу
+    document.addEventListener("DOMContentLoaded", () => {
+      // Виводимо інформацію про користувача у навігаційній панелі
+      getUser(getCookie("user_id"), navUserInfo);
+      // Перелік навчальних предметів
+      getSubjects(document.formParams.subject);  
+      // Перелік журналів
+      getJournals(document.formParams.journal, getCookie("group_id")); 
+
+      // --------------------------------------------------------------------------
+      // Для форми вибору параметрів в цілому визначаємо обробник події oninput
+      formParams.addEventListener('input', (event) => {
+        // кнопкa "Показати рейтинг" доступнa, якщо вся форма валідна
+        if (event.currentTarget.checkValidity())
+          getRatingStudent(getCookie("user_id"), event.currentTarget.journal.value, event.currentTarget.subject.value);
+      }, false);       
+      
+    });
+
+    // --------------------------------------------------------------------------
+    // створення рядка для таблиці рейтингу студента
+    const row = (rating) => { 
+      
+      const tr = document.createElement("tr"); 
+      tr.setAttribute("data-rowid", rating.id); 
+
+      const dateTd = document.createElement("td"); 
+      dateTd.append(rating.dateLesson); 
+      tr.append(dateTd); 
+
+      const teacherTd = document.createElement("td"); 
+      teacherTd.append(`${rating.firstName} ${rating.lastName}`); 
+      tr.append(teacherTd);       
+
+      const themeTd = document.createElement("td"); 
+      themeTd.append(rating.theme); 
+      tr.append(themeTd);         
+
+      const presenceTd = document.createElement("td");
+      if (!rating.isPresence) {
+        tr.setAttribute("style", "--bs-bg-opacity: .25;");
+        tr.setAttribute("class", "bg-danger");
+      }
+      presenceTd.setAttribute("class", !rating.isPresence ? "text-danger" : "text-success");
+      presenceTd.innerHTML = (rating.isPresence 
+        ? '<i class="fa-sharp fa-solid fa-check"></i> присутній(я)' 
+        : '<i class="fa-solid fa-circle-exclamation"></i> відсутній(я)');  
+      tr.append(presenceTd); 
+
+      const gradeTd = document.createElement("td"); 
+      gradeTd.setAttribute("class", "text-center");
+      gradeTd.append(`${rating.grade ?? ""} ${rating.maxGrade ? "/ " + rating.maxGrade : ""}`); 
+      tr.append(gradeTd);   
+
+      return tr; 
+    }         
+  </script>
+</header>
+
+<body>
+  <nav id="idNavigator" class="navbar navbar-expand-lg navbar-light bg-primary">
+    <div class="container-fluid">
+      <div class="logo"></div>
+      <a class="navbar-brand text-white text-left" href="#" id="idBrand">
+        Електронний журнал успішності студентів
+      </a>
+      <p class="text-left">
+      <blockquote class="blockquote">
+        <p id="idUserName" class="text-white">Користувач</p>
+        <figcaption class='blockquote-footer text-white'>
+          <cite title='Source Title' class="text-white" id="idUserInfo"></cite>
+          <span class="mx-4" style="cursor: pointer">
+            <!--Edit user-->
+            <i class="fa-solid fa-gear fa-xs" onclick="window.location.href='/static/pages/user.html'"> Редагувати</i>&nbsp;
+            <!--Sign Out-->
+            <i class="fa-solid fa-right-from-bracket fa-xs" onclick="signOut()"> Вийти з облікового запису</i>
+          </span>
+        </figcaption>
+      </blockquote>
+      </p>
+    </div>
+  </nav>
+
+  <!-- Параметри пошуку -->
+  <form class="needs-validation m-3" name="formParams" id="idFormPaams">
+    <div class="card shadow-lg p-3 mb-5 bg-body rounded">
+      <div class="card-header" style="font-weight: 600;">
+        Параметри пошуку    
+      </div>
+      <div class="row p-2">
+        <div class="mb-3 col-8" >
+          <label for="idSubject" class="form-label">Навчальний предмет*</label>
+          <select class="form-control" id="idSubject" name="subject" required></select>
+          <div class="invalid-feedback">
+            Будь ласка, оберіть навчальний предмет
+          </div>
+        </div>
+        <div class="mb-3 col-4">
+          <label for="idJournal" class="form-label">Навчальний рік*</label>
+          <select class="form-control" id="idJournal" name="journal" required></select>
+          <div class="invalid-feedback">
+            Будь ласка, оберіть навчальний рік
+          </div>
+        </div>        
+      </div>
+    </div>  
+  </form> 
+  
+  <!-- Інформація про рейтинг студента по обраному предмету у навчальному році -->
+  <div class="container-fluid mt-2" id="idDivRating" hidden>
+    <table class="table table-striped table-bordered table-hover mt-3">
+      <thead>
+        <th scope="col">Дата</th>
+        <th scope="col">Викладач</th>
+        <th scope="col">Тема заняття</th>
+        <th scope="col">Моя присутність</th>  
+        <th scope="col">Моя оцінка / Макс. бал</th>              
+      </thead>
+      <tbody id="tbodyRating"></tbody>
+    </table>    
+  </div>  
+</body>
+
+</html>

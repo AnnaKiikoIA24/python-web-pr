@@ -1,0 +1,62 @@
+.logo {
+
+  background-image: url('/static/img/diary.png');
+  background-position: -128px;
+  transition-property: background-position, box-shadow;
+  transition-duration: 0.7s;
+  transition-timing-function: ease-in-out;
+  cursor: pointer;
+  width: 64px;
+  height: 64px;
+  background-size: auto 100%;
+  background-repeat: repeat-x;
+  float: left;
+  margin-top: -5px;
+  margin-right: 10px;
+  margin-bottom: -15px;
+  -moz-transition: all 0.7s linear;
+  -webkit-transition: all 0.7s linear;
+  -ms-transition: all 0.7s linear;
+  -o-transition: all 0.7s linear;
+  transition: all 0.7s linear;
+}
+
+.logo:hover {
+  background-position: 0px;
+}
+
+.authorization-data {
+  max-width: 550px;
+  margin: 10px auto 10px auto;
+}
+
+.btn-center {
+  width: 150px;
+  margin: 3px auto 3px auto;
+}
+
+.btn-action {
+  border-radius: 50%;
+  cursor: pointer;
+}
+.formTable {
+  display: flex;
+}
+
+@media (max-width: 1170px) {
+
+  .btn-group {
+    width: 100%;
+    margin: 10px;
+    padding: 5px;
+  }
+
+  .fixed-width-btn {
+    width: 80px;
+  }
+
+  button {
+    padding: 5px;
+  }
+
+}

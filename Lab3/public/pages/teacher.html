@@ -1,0 +1,342 @@
+<html>
+<header>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Інформація про заняття</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" 
+    rel="stylesheet" 
+    integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3"
+    crossorigin="anonymous">
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js" 
+    integrity="sha384-7+zCNj/IqJ95wo16oMtfsKbZ9ccEh31eOz1HGyDuCQ6wgnyJNSYdrPa03rtR1zdB"
+    crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js" 
+    integrity="sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13" 
+    crossorigin="anonymous"></script>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+    integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />    
+
+  <script lang="js" src="/static/js/users.js"></script>
+  <script lang="js" src="/static/js/subjects.js"></script>
+  <script lang="js" src="/static/js/journals.js"></script>  
+  <script lang="js" src="/static/js/lessons.js"></script>  
+  <script lang="js" src="/static/js/rating.js"></script>      
+  <script lang="js" src="/static/js/validation.data.js"></script>  
+  <script lang="js">
+    // Пост-обробник події завантаження документу
+    document.addEventListener("DOMContentLoaded", () => {
+
+      // Виводимо інформацію про користувача у навігаційній панелі
+      getUser(getCookie("user_id"), navUserInfo);
+      // Перелік навчальних предметів
+      getSubjects(document.formLesson.subject);  
+      // Перелік журналів
+      getJournals(document.formLesson.journal);       
+      // Дата проведення заняття = поточній даті    
+      formLesson.date_lesson.value = dateFormat(new Date());
+
+      // --------------------------------------------------------------------------
+      // Для форми вибору параметрів в цілому визначаємо обробник події oninput
+      formLesson.addEventListener('input', (event) => {
+        // кнопки "Знайти" та "Додати заняття" доступні, якщо вся форма валідна
+        event.currentTarget.btnFindLesson.disabled = !event.currentTarget.checkValidity();
+        // Ховаємо кнопку "Нове заняття"
+        event.currentTarget.btnNewLesson.hidden = true;
+      }, false);   
+      
+      // Обробник події onclick для кнопки "Нове заняття"
+      formLesson.btnNewLesson.addEventListener('click', () =>  {
+        formLesson.idLesson.value = "";
+        formRating.theme.value = "";
+        formRating.max_grade.value = "";
+        // Вибираємо перелік студентів для обраної групи з журналу
+        // Якщо список студентів вибрано успішно, викликаємо функцію addNewRaitings
+        getUsers(formLesson.journal.options[formLesson.journal.selectedIndex].getAttribute("id-group"), addNewRaitings)
+      });    
+
+      // Для форми відображення рейтингу в цілому визначаємо обробник події oninput
+      formRating.addEventListener('input', (event) => {
+        // кнопки "Зберегти" та "Скасувати" стають доступними
+        event.currentTarget.btnSave.disabled = false;
+      }, false);     
+      
+      // Обробник події onclick для кнопки "Збереги зміни"
+      formRating.btnSave.addEventListener('click', (event) => {
+          if (formLesson.idLesson.value == "") 
+            addLesson();
+          else
+            editLesson();         
+      }, false);   
+
+      // Обробник події onclick для кнопки "Скасувати"
+      formRating.btnCancel.addEventListener('click', (event) => {
+          document.getElementById("idDivRating").hidden = true;
+          formLesson.btnNewLesson.hidden = true;
+          formLesson.btnFindLesson.hidden = false;
+          formLesson.subject.disabled = false;
+          formLesson.journal.disabled = false;
+          formLesson.date_lesson.disabled = false;          
+      }, false);       
+    
+      // Обробник події onclick для кнопки "Видалити заняття"
+      formRating.btnDelete.addEventListener('click', (event) => {
+        deleteLesson();         
+      }, false);       
+    });
+
+    // --------------------------------------------------------------------------    
+    // Відображення повідомлення про результат дій
+    const showToast = (textHeader, textMessage, typeMessage) => {
+      const messageToast = document.getElementById('messageToast');
+      document.getElementById("toastHeaderText").textContent = textHeader;
+      document.getElementById("toastMessageText").innerHTML = textMessage;
+      const toastBootstrap = bootstrap.Toast.getOrCreateInstance(messageToast);
+      switch(typeMessage) {
+        case 0: // повідомлення
+          messageToast.classList.remove('bg-danger');
+          messageToast.classList.remove('bg-warning');
+          messageToast.classList.add('bg-success');          
+          break;
+        case 1: // попередження
+          messageToast.classList.remove('bg-danger');
+          messageToast.classList.remove('bg-success');
+          messageToast.classList.add('bg-warning');          
+        break;
+        case 2: // помилка
+          messageToast.classList.remove('bg-success');
+          messageToast.classList.remove('bg-warning');
+          messageToast.classList.add('bg-danger');          
+          break;                    
+      }
+      toastBootstrap.show();      
+    }
+    
+    // --------------------------------------------------------------------------
+    // Додати нові рейтинги студентів групи для заняття (всі значення за замовчуванням)
+    const addNewRaitings = (users) => {
+
+      // Для кожного студента групи створюємо об'єкт рейтингу
+      const defaultRaitings = users.map((user) => {
+        return {
+          "idStudent": user.id,
+          "firstName": user.firstName,
+          "lastName": user.lastName,
+          // За замовчуванням, студент присутній
+          "isPresence": true,
+          // Оцінка не визначена
+          "grade": ""
+        };
+      });
+
+      document.getElementById("tbodyRating").innerHTML = "";
+      // Малюємо рядки таблиці
+      defaultRaitings.forEach((raiting) => 
+        document.getElementById("tbodyRating").append(row(raiting))
+      );
+
+      formLesson.subject.disabled = true;
+      formLesson.journal.disabled = true;
+      formLesson.date_lesson.disabled = true;
+
+      formLesson.btnFindLesson.hidden = true;
+      formLesson.btnNewLesson.hidden = true;
+      document.getElementById("idDivRating").hidden = false;
+      formRating.theme.value = "";
+      formRating.btnSave.disabled = false;
+      formRating.btnDelete.hidden = true;
+
+    }
+
+    // --------------------------------------------------------------------------
+    // створення рядка для таблиці рейтингу студентів на занятті
+    const row = (rating) => { 
+      
+      const tr = document.createElement("tr"); 
+      tr.setAttribute("data-rowid", rating.id); 
+      tr.setAttribute("id-student", rating.idStudent)
+
+      const nameTd = document.createElement("td"); 
+      nameTd.append(`${rating.firstName} ${rating.lastName}`); 
+      tr.append(nameTd); 
+
+      const presenceTd = document.createElement("td"); 
+      const presenceSelect = document.createElement("select"); 
+      presenceSelect.setAttribute("name",`presence-${rating.idStudent}`);
+      presenceSelect.setAttribute("class", "form-control");
+      // Заповнити випадаючий список ознаки присутності
+      let newOption = new Option("присутній(я)", true);      
+      presenceSelect.options[presenceSelect.options.length] = newOption;   
+      newOption = new Option("відсутній(я)", false);
+      presenceSelect.options[presenceSelect.options.length] = newOption;  
+      
+      presenceSelect.value = rating.isPresence; 
+      presenceSelect.classList.add(rating.isPresence ? 'is-valid' : 'is-invalid');
+      presenceSelect.addEventListener("change", (event) => {
+        if (event.currentTarget.value == "false") {
+          event.currentTarget.classList.remove('is-valid');
+          event.currentTarget.classList.add('is-invalid');
+        } else {
+          event.currentTarget.classList.remove('is-invalid');
+          event.currentTarget.classList.add('is-valid');          
+        }
+      });
+
+      presenceTd.append(presenceSelect); 
+      tr.append(presenceTd); 
+
+      const gradeTd = document.createElement("td"); 
+      const gradeInput = document.createElement("input"); 
+      gradeInput.setAttribute("name",`grade-${rating.idStudent}`);
+      gradeInput.setAttribute("type", "number");   
+      gradeInput.setAttribute("min", "1");       
+      gradeInput.setAttribute("max", "100");         
+      gradeInput.setAttribute("class", "form-control text-right");  
+      gradeInput.value = rating.grade;    
+      gradeTd.append(gradeInput); 
+      tr.append(gradeTd);   
+      // const linksTd = document.createElement("td"); 
+
+      // const editLink = document.createElement("button");  
+      // editLink.append("Змінити"); 
+      // editLink.addEventListener("click", async() => await getUser(user.id)); 
+      // linksTd.append(editLink); 
+
+      // const removeLink = document.createElement("button");  
+      // removeLink.append("Видалити"); 
+      // removeLink.addEventListener("click", async () => await deleteUser(user.id)); 
+
+      // linksTd.append(removeLink); 
+      // tr.appendChild(linksTd); 
+
+      return tr; 
+    }     
+  </script>
+</header>
+
+<body>
+  <nav id="idNavigator" class="navbar navbar-expand-lg navbar-light bg-primary">
+    <div class="container-fluid">
+      <div class="logo"></div>
+      <a class="navbar-brand text-white text-left" href="#" id="idBrand">
+        Електронний журнал успішності студентів
+      </a>       
+      <p class="text-left">
+        <blockquote class="blockquote">
+          <p id="idUserName" class="text-white">Користувач</p>
+          <figcaption class='blockquote-footer text-white'>
+            <cite title='Source Title' class="text-white" id="idUserInfo"></cite>    
+            <span class="mx-4" style="cursor: pointer">
+              <!--Edit user-->
+              <i class="fa-solid fa-gear fa-xs" onclick="window.location.href='/static/pages/user.html'"> Редагувати</i>        
+              <!--Sign Out-->
+              <i class="fa-solid fa-right-from-bracket fa-xs" onclick="signOut()"> Вийти з облікового запису</i>
+            </span>         
+            </figcaption>
+        </blockquote>
+      </p>            
+
+    </div>
+  </nav>
+  
+  <!--- Спливаюче вікно повідомлень -->
+  <div class="toast-container position-fixed end-0 p-3" style="z-index: 11">
+    <div id="messageToast" class="toast text-white" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="toast-header">
+        <strong id="toastHeaderText" class="me-auto">Повідомлення</strong>
+        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Закрити"></button>
+      </div>
+      <div id="toastMessageText" class="toast-body">
+      </div>
+    </div>
+  </div>
+
+  <!-- Інформація про заняття-->
+  <form class="needs-validation m-3" name="formLesson" id="idFormLesson">
+    <div class="card shadow-lg p-3 mb-5 bg-body rounded">
+      <div class="card-header" style="font-weight: 600;">
+        Інформація про заняття    
+        <span class="mx-3 gap-3">
+            <button type="button" name="btnFindLesson" class="btn btn-primary btn-action mx-2" onclick="findLesson()" disabled>
+              <i class="fa-solid fa-magnifying-glass-arrow-right"></i> Знайти заняття
+            </button>  
+            <button type="button" name="btnNewLesson" class="btn btn-warning btn-action mx-2" hidden>
+              <i class="fa-solid fa-square-plus"></i> Нове заняття
+            </button>                             
+        </span> 
+      </div>
+      <input type="hidden" id="idLesson" name="idLesson" value="">
+      <div class="row p-2">
+        <div class="mb-3 col-8" >
+          <label for="idSubject" class="form-label">Навчальний предмет*</label>
+          <select class="form-control" id="idSubject" name="subject" required></select>
+          <div class="invalid-feedback">
+            Будь ласка, оберіть навчальний предмет
+          </div>
+        </div>
+        <div class="col-4"></div>
+        
+        <div class="mb-3 col-5" >
+          <label for="idJournal" class="form-label">Журнал групи*</label>
+          <select class="form-control" id="idJournal" name="journal" required></select>
+          <div class="invalid-feedback">
+            Будь ласка, оберіть журнал групи
+          </div>
+        </div>
+
+        <div class="mb-3 col-3">
+          <label for="idDateLesson" class="form-label">Дата проведення заняття*</label>
+          <input type="date" class="form-control item" id="idDateLesson" name="date_lesson" pattern="\d{2}.\d{2}.\d{4}" required/>
+          <div class="invalid-feedback">
+              Будь ласка, введіть дату проведення заняття
+          </div>            
+        </div>
+
+        <div class="col-4">
+        </div>        
+      </div>
+    </div>  
+  </form>
+
+  <!-- Інформація про рейтинги-->
+  <div class="container-fluid mt-2" id="idDivRating" hidden>
+    <form id="idFormRating" name="formRating">
+      <div class="text-center fw-weight-bold">
+        <div class="row text-left" style="font-weight: 600;">
+          <div class="mb-3 col-1">Тема: </div>
+          <div class="mb-3 col-8">
+            <input type="text" class="form-control item" id="idTheme" name="theme" />
+          </div>
+          <div class="mb-3 col-1">Макс. бал: </div>
+          <div class="mb-3 col-2">
+            <input type="number" class="form-control item" id="idMaxGrade" name="max_grade" min="1" max="100"/>
+          </div>          
+        </div>
+        <div class="mx-3 gap-3">
+          <button type="button" name="btnSave" class="btn btn-success btn-action" disabled>
+            <i class="fa-regular fa-floppy-disk"></i> Зберегти зміни
+          </button>
+          <button type="button" name="btnDelete" class="btn btn-danger btn-action">
+            <i class="fa-solid fa-xmark"></i> Видалити заняття
+          </button>            
+          <button type="button" name="btnCancel" class="btn btn-info btn-action">
+            <i class="fa-solid fa-outdent"></i> Новий пошук
+          </button>                                         
+        </div>         
+      </div>
+
+      <table class="table table-striped table-bordered table-hover mt-2">
+      <thead>
+        <th scope="col">Студент</th>
+        <th scope="col">Ознака присутності</th>
+        <th scope="col">Оцінка</th>
+      </thead>
+      <tbody id="tbodyRating"></tbody>
+    </table>
+    </form>
+  </div>
+</body>
+</html>
+
