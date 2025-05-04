@@ -12,7 +12,7 @@ def get_journals(idGroup: int = Query(default = None), db: MongoClient = Depends
     """
     перелік журналів успішності
     """
-    # якщо група не задана, повертаємо перелік всіх ;ehyfksd    
+    # якщо група не задана, повертаємо перелік всіх журналів;  
     condition = {}
     # якщо група задана, додатково фільтрація по групі
     if (idGroup != None):
