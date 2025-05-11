@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% load static %} 
+
+{% block title %}Реєстрація користувача{% endblock title %} 
+
+{% block scripts %}       
+  <script lang="js" src="{% static "js/users.js" %}"></script>
+  <script lang="js" src="{% static "js/groups.js" %}"></script>    
+  <script lang="js" src="{% static "js/validation.data.js" %}"></script>  
+{% endblock scripts %}
+
+{% block user %}       
+  <div class="collapse navbar-collapse" id="navbarSupportedContent">
+    <ul class="nav justify-content-center">
+      <!--Sign Up-->             
+      <li class="nav-item">
+        <div class="card-header bg-primary text-white">
+          <i class="fa-solid fa-user-plus"></i> <span id="idCardHeader">Реєстрація користувача</span>
+        </div>
+      </li>
+    </ul> 
+
+  </div>
+{% endblock user %}    
+
+
+{% block content %}   
+  <div class="card authorization-data">
+
+    <form class="needs-validation m-3" name="formRegistr" id="idFormRegistr" method="post">
+      {% csrf_token %}
+      {% for field in form %} 
+      {% if field.name == "group" %}
+        <div class="mb-3" id="idDivGroup" style="display: none;">
+          {{field.label_tag}}
+      {% elif field.name != "role" %}
+        <div class="mb-3">
+          {{field.label_tag}}
+      {% endif %}           
+        {{field}}
+        <div class="invalid-feedback">{{field.help_text}}</div>
+      {% if field.name != "role" %}
+        </div> 
+      {% endif %}
+      {% endfor %} 
+
+
+      <div class="text-center">
+        <button type="button" name="signUp" class="btn btn-success" disabled>
+          Зареєструватись
+        </button>
+        <button type="reset" name="cancel" class="btn btn-secondary" disabled>
+          Скасувати
+        </button>      
+        <button type="reset" name="exit" class="btn btn-primary" onclick="signOut()">
+          На головну
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // Заповнення переліку груп
+      getGroups(document.formRegistr.group);
+      // ----------------------------------------------------------------------
+
+      // У форми реєстрації обираємо всі можливі дочірні елементи вводу
+      formRegistr
+        .querySelectorAll("input, select, textarea")
+        .forEach((element) => {
+          // на кожен елемент підключаємо обробники подій change, input
+          element.addEventListener('change', (event) => checkValidation(event));
+          element.addEventListener('input', (event) => resetClassList(event.currentTarget));
+        });   
+
+      formRegistr.querySelectorAll('[name="role"]')
+      .forEach((element) => {
+          // на кожен елемент checkbox підключаємо обробники подій change
+          element.addEventListener('change', (event) => {
+            // Якщо обрана опція "Викладач", то групу ховаємо
+            document.getElementById("idDivGroup").style.display = event.currentTarget.value == 1 ? "" : "none";
+            formRegistr.group.disabled = event.currentTarget.value == 0;            
+          });
+        });       
+
+      // Для форми реєстрації в цілому визначаємо обробник події reset
+      formRegistr.addEventListener('reset', (event) => {
+        // робимо кнопку Sign Up disabled
+        event.currentTarget.signUp.disabled = true;
+        // робимо кнопку Cancel disabled
+        event.currentTarget.cancel.disabled = true;
+        event.currentTarget.group.style.display = "none";
+        event.currentTarget.group.disabled = true;
+        // У елементів форми вилучаємо стилі перевірок
+        event.currentTarget.querySelectorAll("input, select, textarea")
+          .forEach((node) => resetClassList(node));
+
+      }, false);
+
+      // Для форми реєстрації в цілому визначаємо обробник події oninput
+      formRegistr.addEventListener('input', (event) => {
+        // кнопка Зареєструватись доступна, якщо вся форма валідна
+        event.currentTarget.signUp.disabled = !event.currentTarget.checkValidity();
+        // робимо кнопку Cancel доступною
+        if (event.currentTarget.cancel.disabled)
+        event.currentTarget.cancel.disabled = false;
+
+      }, false);
+
+      formRegistr.signUp.addEventListener('click', () => {
+        const userId = getCookie("user_id");
+        if (userId)
+          editUser(userId);
+        else
+          addUser();
+      });
+
+    });
+
+    // ----------------------------------------------------------------------
+    // Заповнення полів форми при виклику на редагування
+    const fillUserInfo = (user) => {
+      formRegistr.login.value = user.login;
+      formRegistr.password.value = user.password;
+      formRegistr.last_name.value = user.lastName;
+      formRegistr.first_name.value = user.firstName;
+      formRegistr.role.value = user.role ? 1 : 0;
+      id_role_0.disabled = true;
+      id_role_1.disabled = true;
+      formRegistr.group.value = user.idGroup;
+      id_group.disabled = true;      
+      document.getElementById("idDivGroup").style.display = user.role ? "" : "none";
+      document.getElementById("idCardHeader").innerText = "Редагування";
+      formRegistr.signUp.innerText = "Зберегти";
+    }
+  </script>
+{% endblock content %} 

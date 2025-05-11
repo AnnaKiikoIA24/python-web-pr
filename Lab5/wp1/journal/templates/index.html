@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load static %} 
+
+{% block scripts %}       
+  <script lang="js" src="{% static "js/users.js" %}"></script>
+{% endblock scripts %}
+
+{% block user %}       
+  <div class="collapse navbar-collapse" id="navbarSupportedContent">
+    <ul class="nav justify-content-center">
+      <!--Sign Up-->             
+      <li class="nav-item">
+        <a class="nav-link active text-white" aria-current="page" href="/user">
+          <i class="fa-solid fa-user-plus"></i> Зареєструватись
+        </a>
+      </li>
+    </ul> 
+
+  </div>
+{% endblock user %}    
+
+{% block content %}
+  <div class="card authorization-data">
+    <div class="card-header">
+      Вхід у систему
+    </div>
+
+    <form class="needs-validation m-3" name="formSignIn" id="idFormSignIn"  
+        action="javascript:checkUser();" method="post">
+      {% csrf_token %} 
+
+      {% for field in form %} 
+      <div class="mb-3"> 
+        {{field.label_tag}}
+        {{field}}
+        {{field.help_text}}
+      </div> 
+      {% endfor %} 
+          
+      <button type="submit" name="signIn" class="btn btn-primary" >
+        Увійти
+      </button>&nbsp;
+      <button type="reset" name="cancel" class="btn btn-secondary" >
+        Скасувати
+      </button>&nbsp;
+    </form> 
+        
+    <div class="alert alert-danger mt-4" role="alert" id="idError" style="display: none;">
+    </div>
+  </div>  
+
+  <div class="container-fluid mt-5">
+    <div class="card p-3">
+      <h4>Загальна інформація і досягнення:</h4>
+      <ul>
+        <li>КПІ входить до 4% кращих університетів світу за версією міжнародних рейтингів QS і Webometrics.</li>
+        <li>Щорічно обіймає найвищі позиції у рейтингах вищих навчальних закладів України "Компас" та "ТОП-200 Україна".</li>
+        <li>Найпопулярніший у мережі Інтернет вищий навчальний заклад України останніх років за версією корпорації Google.</li>
+      </ul>
+    </div>
+  </div>
+  {% endblock content %}
