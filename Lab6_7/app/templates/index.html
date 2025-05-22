@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block scripts %}       
+  <script lang="js" src="../static/js/users.js"></script>
+{% endblock scripts %}
+
+{% block user %}       
+  <div class="collapse navbar-collapse" id="navbarSupportedContent">
+    <ul class="nav justify-content-right">
+      <!--Sign Up-->             
+      <li class="nav-item">
+        <a class="nav-link active text-white" aria-current="page" href="/user">
+          <i class="fa-solid fa-user-plus"></i> Зареєструватись
+        </a>
+      </li>
+    </ul> 
+
+  </div>
+{% endblock user %}    
+
+{% block content %}
+  <div class="card authorization-data">
+    <div class="card-header">
+      Вхід у систему
+    </div>
+
+    <form class="needs-validation m-3" name="formSignIn" id="idFormSignIn"  
+        action="javascript:checkUser();" method="post">
+      {{ form.csrf_token() }}
+
+      {% for field in form if field.name != "csrf_token" %} 
+      <div class="mb-3"> 
+        <label class="form-label">{{field.label}}</label>
+        {{field}}
+      </div> 
+      {% endfor %} 
+          
+      <button type="submit" name="signIn" class="btn bg-navy" >
+        Увійти
+      </button>&nbsp;
+      <button type="reset" name="cancel" class="btn btn-secondary" >
+        Скасувати
+      </button>&nbsp;
+    </form> 
+        
+    <div class="alert alert-danger mt-4" role="alert" id="idError" style="display: none;">
+    </div>
+  </div>  
+
+  <div class="container-fluid mt-5">
+    <div class="card p-3">
+      <h4>Можливості системи:</h4>
+      <h5>Диспетчер:</h5>
+      <ul>
+        <li>Створення графіка руху.</li>
+        <li>Коригування розкладу (уведення в дію інваріантного графіку руху на визначений період).</li>
+        <li>Моніторинг руху та сповіщення пасажирів про запізнення.</li>
+        <li>Усі можливості звичайного користувача.</li>
+      </ul>
+      
+      <h5>Пасажир:</h5>
+      <ul>
+        <li>Перегляд розкладу руху.</li>
+        <li>Купівля квитка.</li>
+        <li>Моніторинг руху.</li>
+      </ul>
+    </div>
+  </div>
+  {% endblock content %}

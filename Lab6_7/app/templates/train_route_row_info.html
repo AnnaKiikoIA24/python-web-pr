@@ -1,0 +1,61 @@
+<!DOCTYPE html> 
+<!-- Інформація про рядок розкладу руху -->
+
+  {{ form.csrf_token() }}
+  <div class="card shadow-lg p-3 bg-body rounded">
+    {{ form.id_row }}
+    {{ form.id_train }}
+
+    <div class="row p-2">
+
+      <div class="mb-3 col-6" >
+        {{form.num_order.label}}
+        {{ form.num_order }}
+        <div class="invalid-feedback">
+          {{ form.num_order.description }}
+        </div>
+      </div>
+
+      <div class="mb-3 col-6" >
+        {{ form.station.label }}
+        {{ form.station() }}
+        <div class="invalid-feedback">
+          {{ form.station.description }}
+        </div>             
+      </div>
+      
+      <div class="mb-3 col-6" >
+        {{ form.hours_arr.label }}
+        {{ form.hours_arr }}
+        <div class="invalid-feedback">
+          {{ form.hours_arr.description }}
+        </div>          
+      </div>
+
+      <div class="mb-3 col-6" >
+        {{ form.minutes_arr.label }}
+        {{ form.minutes_arr }}
+        <div class="invalid-feedback">
+          {{ form.minutes_arr.description }}
+        </div>          
+      </div>
+
+      <div class="mb-3 col-6" >
+        {{ form.hours_depart.label }}
+        {{ form.hours_depart }}
+        <div class="invalid-feedback">
+          {{ form.hours_depart.description }}
+        </div>          
+      </div>
+      
+      <div class="mb-3 col-6" >
+        {{ form.minutes_depart.label }}
+        {{ form.minutes_depart }}
+        <div class="invalid-feedback">
+          {{ form.minutes_depart.description }}
+        </div>          
+      </div>   
+      
+    </div>
+  </div>  
+

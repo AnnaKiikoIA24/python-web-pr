@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block scripts %}       
+  <script lang="js" src="{{ url_for('static', filename='js/users.js') }}"></script>  
+  <script lang="js" src="{{ url_for('static', filename='js/validation.data.js') }}"></script>  
+{% endblock scripts %}
+
+{% block user %}       
+  <div class="collapse navbar-collapse" id="navbarSupportedContent">
+    <ul class="nav justify-content-center">            
+      <li class="nav-item">
+        <div class="card-header">
+          <span id="idCardHeader"><i class="fa-solid fa-user-plus"></i>Реєстрація користувача</span>
+        </div>
+      </li>
+    </ul> 
+
+  </div>
+{% endblock user %}    
+
+
+{% block content %}   
+  <div class="card authorization-data">
+    
+    <form class="needs-validation m-3" name="formRegistr" id="idFormRegistr" method="post">
+      {{ form.csrf_token() }}
+
+      {% for field in form if field.name != "csrf_token" %} 
+      <div class="mb-3"> 
+        <label class="form-label">{{field.label}}</label>
+        {{field}}
+        <div class="invalid-feedback">{{ field.description }}</div>
+      </div> 
+      {% endfor %} 
+
+
+      <div class="text-center">
+        <button type="button" name="signUp" class="btn btn-success" disabled>
+          Зареєструватись
+        </button>
+        <button type="reset" name="cancel" class="btn btn-secondary" disabled>
+          Скасувати
+        </button>      
+        <button type="reset" name="exit" class="btn bg-navy" onclick="signOut()">
+          На головну
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // ----------------------------------------------------------------------
+      const userId = getCookie("user_id");
+      if (userId) {
+        document.getElementById("idCardHeader").innerHTML = 
+            '<i class="fa-solid fa-user-edit"></i> &nbsp;Редагування даних користувача';
+        formRegistr.signUp.innerText = "Зберегти";
+      }
+
+      // У форми реєстрації обираємо всі можливі дочірні елементи вводу
+      formRegistr
+        .querySelectorAll("input, select, textarea")
+        .forEach((element) => {
+          // на кожен елемент підключаємо обробники подій change, input
+          element.addEventListener('change', (event) => checkValidation(event));
+          element.addEventListener('input', (event) => resetClassList(event.currentTarget));
+        });         
+
+      // Для форми реєстрації в цілому визначаємо обробник події reset
+      formRegistr.addEventListener('reset', (event) => {
+        // робимо кнопку Sign Up disabled
+        event.currentTarget.signUp.disabled = true;
+        // робимо кнопку Cancel disabled
+        event.currentTarget.cancel.disabled = true;
+        // У елементів форми вилучаємо стилі перевірок
+        event.currentTarget.querySelectorAll("input, select, textarea")
+          .forEach((node) => resetClassList(node));
+
+      }, false);
+
+      // Для форми реєстрації в цілому визначаємо обробник події oninput
+      formRegistr.addEventListener('input', (event) => {
+        // кнопка Зареєструватись доступна, якщо вся форма валідна
+        event.currentTarget.signUp.disabled = !event.currentTarget.checkValidity();
+        // робимо кнопку Cancel доступною
+        if (event.currentTarget.cancel.disabled)
+        event.currentTarget.cancel.disabled = false;
+
+      }, false);
+
+      formRegistr.signUp.addEventListener('click', () => {
+        const userId = getCookie("user_id");
+        if (userId)
+          editUser(userId);
+        else
+          addUser();
+      });
+
+    });
+  </script>
+{% endblock content %} 

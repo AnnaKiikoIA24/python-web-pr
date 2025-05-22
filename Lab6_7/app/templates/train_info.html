@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block scripts %} 
+  <script lang="js" src="{{ url_for('static', filename='js/users.js') }}"></script>  
+  <script lang="js" src="{{ url_for('static', filename='js/trains.js') }}"></script> 
+  <script lang="js" src="{{ url_for('static', filename='js/train_route.js') }}"></script>   
+  <script lang="js" src="{{ url_for('static', filename='js/validation.data.js') }}"></script>      
+  <script lang="js">
+    // Пост-обробник події завантаження документу
+    document.addEventListener("DOMContentLoaded", () => {
+
+      // Виводимо інформацію про користувача у навігаційній панелі
+      getUser(getCookie("user_id"), navUserInfo);     
+   
+      // Для форми коригування інформації про поїзд в цілому визначаємо обробник події oninput
+      train_info_form.addEventListener('input', (event) => {
+        // кнопка "Зберегти зміни" доступна, якщо вся форма валідна
+        event.currentTarget.btnSaveInfo.disabled = 
+          !event.currentTarget.checkValidity() ||
+          // у уих списках перший елемент - пуста строка: якщо обрана, то кнопка "Зберегти" не доступна
+          event.currentTarget.station_from.value == -1 ||
+          event.currentTarget.station_to.value == -1;
+
+      }, false);  
+      
+      // Обробник натискання на кнопку "Зберегти зміни"
+      train_info_form.btnSaveInfo.addEventListener('click', () => {
+        const idTrain = train_info_form.id_train.value;
+        if (idTrain != "")
+          editTrain();
+        else
+          addTrain();
+      });      
+
+      // Обробник натискання на кнопку "До списку поїздів"
+      train_info_form.btnBackToListTrains.addEventListener('click', () => {
+        // Встановлюємо ознаку, що сторінку поїздів треба перезавантажити
+        sessionStorage.setItem('submitFormOnBack', '1');        
+        window.history.back();
+      });     
+
+      // Обробник події onclick для кнопок "Редагувати рядок розкладу"
+      document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', function (e) {
+          const id = this.getAttribute("id-row");
+          openModalRouteRow(id, train_info_form.id_train.value);
+        });
+      });    
+      
+      // Обробник події onclick для кнопок "Видалити рядок розкладу"
+      document.querySelectorAll('.del-btn').forEach(btn => {
+        btn.addEventListener('click', function (e) {
+          if (window.confirm("Ви дійсно хочете видалити рядок з розкладу?")) {
+            deleteRow(this.getAttribute("id-row"));
+          }
+        });
+      });  
+      
+      // Для форми коригування інформації про поїзд в цілому визначаємо обробник події oninput
+      form_modal.addEventListener('input', (event) => {
+        // кнопка "Зберегти зміни" доступна, якщо вся форма валідна
+        event.currentTarget.btnSaveInfoRow.disabled = 
+          !event.currentTarget.checkValidity() ||
+          // у списку станцій перший елемент - пуста строка: якщо обрана, то кнопка "Зберегти" не доступна
+          event.currentTarget.station.value == -1;
+      }, false);  
+      
+      // Обробник натискання на кнопку "Зберегти зміни"
+      form_modal.btnSaveInfoRow.addEventListener('click', () => {
+        const idRow = form_modal.id_row.value;
+        if (idRow != "")
+          editRow();
+        else
+          addRow();
+      });       
+    });
+
+  </script>
+{% endblock scripts %}
+
+{% block user %}   
+  <p class="text-left">
+    <blockquote class="blockquote">
+      <p id="idUserName" class="text-white">Користувач</p>
+      <figcaption class='blockquote-footer text-white'>
+        <cite title='Source Title' class="text-white" id="idUserInfo"></cite>
+        <span class="mx-4" style="cursor: pointer">
+          <!--Edit user-->
+          <i class="fa-solid fa-user-edit fa-xs" onclick='window.location.href="../user.html"'> Редагувати</i>&nbsp;
+          <!--Sign Out-->
+          <i class="fa-solid fa-right-from-bracket fa-xs" onclick="signOut()"> Вийти з облікового запису</i>
+        </span>
+      </figcaption>
+    </blockquote>
+  </p>
+{% endblock user %}
+
+{% block content %}
+
+  <!-- Інформація про поїзд -->
+  <form class="needs-validation m-3" name="train_info_form" id="idFormTrainInfo" method="post">
+    {{ train_info_form.csrf_token() }}
+    <div class="card shadow-lg p-3 mb-5 bg-body rounded">
+      <div class="card-header" style="font-weight: 600;">
+        Інформація про поїзд  
+        <span class="mx-3 gap-3">
+            <button type="button" name="btnSaveInfo" class="btn btn-success mx-2" disabled>
+              <i class="fa-regular fa-floppy-disk"></i> Зберегти зміни
+            </button> 
+            
+            <button type="button" name="btnBackToListTrains" class="btn btn-outline-dark mx-2">
+              <i class="fa-solid fa-outdent"></i> До списку поїздів
+            </button>        
+            
+            <div class="alert alert-danger mt-4" role="alert" id="idError" style="display: none;">
+            </div>            
+        </span> 
+      </div>
+
+      {{ train_info_form.id_train }}
+      {{ train_info_form.old_period }}
+
+      <div class="row p-2">
+
+        <div class="mb-3 col-6" >
+          <b>{{train_info_form.period.label}}</b>
+          {% if train_info_form.id_train.data != None %}
+          <i>(при зміні періоду новий період буде додано до переліку періодів поїзда)</i>
+          {% endif %}
+          {{ train_info_form.period() }}
+          <div class="invalid-feedback">
+            {{ train_info_form.period.description }}
+          </div>
+        </div>
+
+        <div class="mb-3 col-6" >
+          {{ train_info_form.num_train.label }}
+          {{ train_info_form.num_train }}
+          <div class="invalid-feedback">
+            {{ train_info_form.num_train.description }}
+          </div>             
+        </div>
+        
+        <div class="mb-3 col-6" >
+          {{ train_info_form.station_from.label }}
+          {{ train_info_form.station_from() }}
+          <div class="invalid-feedback">
+            {{ train_info_form.station_from.description }}
+          </div>          
+        </div>
+
+        <div class="mb-3 col-6" >
+          {{ train_info_form.station_to.label }}
+          {{ train_info_form.station_to() }}
+          <div class="invalid-feedback">
+            {{ train_info_form.station_to.description }}
+          </div>          
+        </div>
+        
+      </div>
+    </div>  
+  </form>
+
+  <!-- Інформація про розклад руху -->
+   <div class="container-fluid mt-2" id="idDivTrainRoute"  
+    {% if train_info_form.id_train.data == None %}hidden{% endif %}>
+    <form id="idFormTrainRoute" name="form_train_route">
+      <div class="text-center fw-weight-bold">
+        <div class="mx-3 gap-3"> 
+          <h4>Розклад руху</h4>                                                                                  
+        </div>         
+      </div>
+
+      <table class="table table-striped table-bordered table-hover mt-2">
+      <thead>
+        <th scope="col">№ з/п</th>
+        <th scope="col">Станція</th>
+        <th scope="col">Час прибуття</th>
+        <th scope="col">Час відправлення</th>
+        <th scope="col">     
+          <button type="button" name="btnNewRow" class="btn btn-outline-success mx-3"
+          onclick="openModalRouteRow('', train_info_form.id_train.value)">
+            <i class="fa-solid fa-square-plus"></i> Додати рядок
+          </button>
+        </th>           
+        </th>    
+      </thead>
+
+      <tbody id="tbodyTrainRoute">
+      {% for trainRoute in train_routes %} 
+        <tr data-rowid="{{ trainRoute.id }}">
+          <td scope="col">{{ trainRoute.numOrder }}</td>
+          <td scope="col">{{ trainRoute.nameStation }}</td>
+          <td scope="col">
+            {% if trainRoute.hoursArr != None%}
+            {{ "%02d"|format(trainRoute.hoursArr ) }}:{{ "%02d"|format(trainRoute.minutesArr) }}
+            {% endif%}
+          </td>           
+          <td scope="col">
+            {% if trainRoute.hoursDepart != None%}            
+            {{ "%02d"|format(trainRoute.hoursDepart) }}:{{ "%02d"|format(trainRoute.minutesDepart) }}
+            {% endif%}
+          </td> 
+          <td>
+            <div class="mx-3 gap-3">    
+              <button type="button" class="btn btn-outline-success mx-2 edit-btn" id-row="{{ trainRoute.id }}">
+                <i class="fa-solid fa-file-pen"></i>
+              </button>                                       
+              <button type="button" class="btn btn-outline-danger del-btn" id-row="{{ trainRoute.id }}">
+                <i class="fa-solid fa-delete-left"></i>
+              </button>                                         
+            </div>             
+          </td>         
+        </tr>
+      {% endfor %}         
+      </tbody>
+    </table>
+    </form>
+  </div>   
+
+  <!-- Модальне вікно -->
+  <div class="modal" id="trainRouteModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Інформація про рядок розкладу поїзда</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
+        </div>
+        <form class="needs-validation m-3" name="form_modal" id="idFormModal" method="post">
+          <div class="modal-body" id="trainRouteModalContent">      
+
+          </div>
+          <div class="modal-footer">
+            <button type="button" name="btnSaveInfoRow" class="btn btn-success mx-2" disabled>
+              <i class="fa-regular fa-floppy-disk"></i> Зберегти зміни
+            </button> 
+          </div> 
+        </form>       
+      </div>
+    </div>
+  </div>  
+  
+{% endblock content %}

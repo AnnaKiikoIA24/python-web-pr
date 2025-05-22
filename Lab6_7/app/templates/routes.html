@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block scripts %} 
+  <script lang="js" src="{{ url_for('static', filename='js/users.js') }}"></script>  
+  <script lang="js">
+    // Пост-обробник події завантаження документу
+    document.addEventListener("DOMContentLoaded", () => {
+
+      // Виводимо інформацію про користувача у навігаційній панелі
+      getUser(getCookie("user_id"), navUserInfo);     
+      find_form.btnFindTrain.disabled = 
+          (find_form.station_start.value == -1 || find_form.station_fin.value == -1); 
+      // console.log("find_form.station_start.value =", find_form.station_start.value);      
+
+      // Для форми вибору параметрів в цілому визначаємо обробник події oninput
+      find_form.addEventListener('input', (event) => {
+        // кнопка "Знайти" доступна, якщо форма валідна
+        event.currentTarget.btnFindTrain.disabled = 
+           ( event.currentTarget.station_start.value == -1 ||  event.currentTarget.station_fin.value == -1); 
+      }, false);       
+    });
+  </script>
+{% endblock scripts %}
+
+{% block user %}   
+  <p class="text-left">
+    <blockquote class="blockquote">
+      <p id="idUserName" class="text-white">Користувач</p>
+      <figcaption class='blockquote-footer text-white'>
+        <cite title='Source Title' class="text-white" id="idUserInfo"></cite>
+        <span class="mx-4" style="cursor: pointer">
+          <!--Edit user-->
+          <i class="fa-solid fa-user-edit fa-xs" onclick='window.location.href="../user.html"'> Редагувати</i>&nbsp;
+          <!--Sign Out-->
+          <i class="fa-solid fa-right-from-bracket fa-xs" onclick="signOut()"> Вийти з облікового запису</i>
+        </span>
+      </figcaption>
+    </blockquote>
+  </p>
+{% endblock user %}
+
+{% block content %}
+  <!-- Пошук поїздів за напрямком "звідки-куди" на задану дату відправлення -->
+  <form class="needs-validation m-3" name="find_form" id="idFormFindTrain" method="post">
+    {{ find_form.csrf_token() }}
+    <div class="card shadow-lg p-3 mb-5 bg-body rounded">
+      <div class="card-header" style="font-weight: 600;">
+        Пошук поїздів   
+        <span class="mx-3 gap-3">
+            <button type="submit" name="btnFindTrain" class="btn bg-navy btn-action mx-2" >
+              <i class="fa-solid fa-magnifying-glass-arrow-right"></i> Знайти
+            </button>  
+        </span> 
+      </div>
+
+      <div class="row p-2">
+        <div class="mb-3 col-4" >
+          {{ find_form.station_start.label }}
+          {{ find_form.station_start() }}
+          <div class="invalid-feedback">
+            {{ find_form.station_start.description }}
+          </div>          
+        </div>
+
+        <div class="mb-3 col-4" >
+          {{ find_form.station_fin.label }}
+          {{ find_form.station_fin() }}
+          <div class="invalid-feedback">
+            {{ find_form.station_fin.description }}
+          </div>          
+        </div>
+
+        <div class="mb-3 col-4" >
+          {{ find_form.date_route.label }}
+          {{ find_form.date_route }}
+          <div class="invalid-feedback">
+            {{ find_form.date_route.description }}
+          </div>          
+        </div>      
+      </div>
+    </div>  
+  </form>
+
+  {% if header_result != "" %}
+  <!-- Інформація про маршрути за заданими параметрами -->
+   <div class="container-fluid mt-2" >
+    <form id="idFormTrains" name="form_trains">
+      <div class="text-center fw-weight-bold">
+        <div class="mx-3 gap-3"> 
+          <h4>{% autoescape false %}{{ header_result }}{% endautoescape %}</h4>                                                                                  
+        </div>         
+      </div>
+
+      {% if trains | length > 0 %}
+      <table class="table table-striped table-bordered table-hover mt-2">
+      <thead>
+        <th scope="col">Номер поїзду</th>
+        <th scope="col">Сполучення поїзду</th>
+        <th scope="col">{{ name_station_start }}: час відправлення</th>
+        <th scope="col">{{ name_station_fin }}: час прибуття</th>          
+      </thead>
+
+      <tbody id="tbodyTrains">
+      {% for train in trains %} 
+        <tr data-rowid="{{ train.id }}">
+          <td scope="col">{{ train.numTrain }}</td>
+          <td scope="col">{{ train.nameStationFrom }} --- {{ train.nameStationTo }}</td>
+          <td scope="col">
+            {% if train.hoursDepart != None%}
+            {{ "%02d"|format(train.hoursDepart) }}:{{ "%02d"|format(train.minutesDepart) }}
+            {% endif%}
+          </td>           
+          <td scope="col">
+            {% if train.hoursArr != None%}            
+            {{ "%02d"|format(train.hoursArr ) }}:{{ "%02d"|format(train.minutesArr) }}
+            {% endif%}
+          </td> 
+        </tr>
+      {% endfor %}         
+      </tbody>
+    </table>
+    {% endif %}
+
+    </form>
+  </div> 
+  {% endif %}  
+{% endblock content %}
+ 
+

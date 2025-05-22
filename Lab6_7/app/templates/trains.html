@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block scripts %} 
+  <script lang="js" src="{{ url_for('static', filename='js/users.js') }}"></script>  
+  <script lang="js" src="{{ url_for('static', filename='js/trains.js') }}"></script>  
+  <script lang="js" src="{{ url_for('static', filename='js/validation.data.js') }}"></script>        
+  <script lang="js">
+    // Пост-обробник події завантаження документу
+    document.addEventListener("DOMContentLoaded", () => {
+
+      // Виводимо інформацію про користувача у навігаційній панелі
+      getUser(getCookie("user_id"), navUserInfo);     
+      find_form.btnFindTrain.disabled = (find_form.period.selectedIndex == -1); 
+      
+      // Обробник події onclick для кнопки "Додати поїзд"
+      form_trains.btnNewTrain.addEventListener('click', () =>  {
+        window.location.href = 
+          `../train_info?num_train=${form_trains.selected_num_train.value}&period=${form_trains.selected_period.value}`
+      }); 
+      
+      // Обробник події onclick для кнопок "Редагувати поїзд"
+      document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', function (e) {
+          const id = this.getAttribute("id-train");
+          const selectedPeriod = document.forms["form_trains"].selected_period.value;
+
+          window.location.href = `../train_info?id_train=${id}&period=${selectedPeriod}`;
+        });
+      });    
+      
+      // Обробник події onclick для кнопок "Видалити поїзд" (або прив'зку поїзда до періоду)
+      document.querySelectorAll('.del-btn').forEach(btn => {
+        btn.addEventListener('click', function (e) {
+          if (window.confirm("Ви дійсно хочете видалити поїзд?")) {
+            const selectedPeriod = document.forms["form_trains"].selected_period.value;
+            deleteTrain(this.getAttribute("id-train"), selectedPeriod);
+          }
+        });
+      });  
+      
+      // Автоматичне оновлення даних після повернення з режиму редагування на сторінці train_info
+      if (sessionStorage.getItem('submitFormOnBack') === '1') {
+        sessionStorage.removeItem('submitFormOnBack'); // видаляємо ознаку, щоб не спрацювала коли не треба
+        idFormFindTrain.period.value = idFormTrains.selected_period.value;
+        idFormFindTrain.num_train.value = idFormTrains.selected_num_train.value;
+        idFormFindTrain.submit();
+      }      
+
+    });
+  </script>
+{% endblock scripts %}
+
+{% block user %}   
+  <p class="text-left">
+    <blockquote class="blockquote">
+      <p id="idUserName" class="text-white">Користувач</p>
+      <figcaption class='blockquote-footer text-white'>
+        <cite title='Source Title' class="text-white" id="idUserInfo"></cite>
+        <span class="mx-4" style="cursor: pointer">
+          <!--Edit user-->
+          <i class="fa-solid fa-user-edit fa-xs" onclick='window.location.href="../user.html"'> Редагувати</i>&nbsp;
+          <!--Sign Out-->
+          <i class="fa-solid fa-right-from-bracket fa-xs" onclick="signOut()"> Вийти з облікового запису</i>
+        </span>
+      </figcaption>
+    </blockquote>
+  </p>
+{% endblock user %}
+
+{% block content %}
+  <!-- Пошук поїздів за номером поїзда та періодом -->
+  <form class="needs-validation m-3" name="find_form" id="idFormFindTrain" method="post">
+    {{ find_form.csrf_token() }}
+    <div class="card shadow-lg p-3 mb-5 bg-body rounded">
+      <div class="card-header" style="font-weight: 600;">
+        Пошук поїздів   
+        <span class="mx-3 gap-3">
+            <button type="submit" name="btnFindTrain" class="btn bg-navy btn-action mx-2" >
+              <i class="fa-solid fa-magnifying-glass-arrow-right"></i> Знайти поїзди
+            </button>  
+        </span> 
+      </div>
+
+      <div class="row p-2">
+        <div class="mb-3 col-2" >
+          {{ find_form.num_train.label }}
+          {{ find_form.num_train }}
+        </div>
+
+        <div class="mb-3 col-2" >
+          {{find_form.period.label}}
+          {{ find_form.period() }}
+          <div class="invalid-feedback">
+            {{ find_form.period.description }}
+          </div>
+        </div>        
+      </div>
+    </div>  
+  </form>
+
+  {% if header_result != "" %}
+  <!-- Інформація про поїзди -->
+   <div class="container-fluid mt-2" id="idDivTrains" >
+    <form id="idFormTrains" name="form_trains">
+      <div class="text-center fw-weight-bold">
+        <div class="mx-3 gap-3"> 
+          <h4>{% autoescape false %}{{ header_result }}{% endautoescape %}</h4>                                                                                  
+        </div>         
+      </div>
+      <input type="hidden" id="selected_num_train" name="selected_num_train" value="{{find_form.num_train.data}}">      
+      <input type="hidden" id="selected_period" name="selected_period" value="{{find_form.period.data}}">
+
+      <table class="table table-striped table-bordered table-hover mt-2">
+      <thead>
+        <th scope="col">Номер поїзду</th>
+        <th scope="col">Початкова станція</th>
+        <th scope="col">Кінцева станція</th>
+        <!--- Використання фільтрів: кнопка додати доступна, якщо не задано номер поїзда або кількість поїздів = 0, інакше -порушення унікальності номеру поїзда у період дії графіка --> 
+        <th scope="col">     
+          <button type="button" name="btnNewTrain" class="btn btn-success mx-3"
+          {% if find_form.num_train.data != None and trains|length > 0 %} hidden{% endif %} >
+            <i class="fa-solid fa-square-plus"></i> Додати поїзд
+          </button>
+        </th>    
+      </thead>
+
+      <tbody id="tbodyTrains">
+      {% for train in trains %} 
+        <tr data-rowid="{{ train.id }}">
+          <td scope="col">{{ train.numTrain }}</td>
+          <td scope="col">{{ train.nameStationFrom }}</td>
+          <td scope="col">{{ train.nameStationTo }}</td> 
+          <td>
+            <div class="mx-3 gap-3">    
+              <button type="button" class="btn btn-success mx-2 edit-btn" id-train="{{ train.id }}">
+                <i class="fa-solid fa-square-pen"></i>
+              </button>                                       
+              <button type="button" class="btn btn-danger del-btn" id-train="{{ train.id }}">
+                <i class="fa-solid fa-square-minus"></i>
+              </button>                                         
+            </div>             
+          </td>         
+        </tr>
+      {% endfor %}         
+      </tbody>
+    </table>
+    </form>
+  </div> 
+  {% endif %}
+{% endblock content %}
+ 
+
